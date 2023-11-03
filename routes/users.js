@@ -1,19 +1,19 @@
 const express = require('express');
 const router = express.Router();
 
-router.get('/', (req, res, next) => {
+router.get('/', (req, res) => {
     res.status(200).json({
-        message: 'Handling GET request to /users'
+        message: 'Handling GET request to /user'
     });
 });
 
-router.post('/', (req, res, next) => {
+router.post('/', (req, res) => {
     res.status(200).json({
-        message: 'Handling POST request to /users'
+        message: 'Handling POST request to /user'
     });
 });
 
-router.get('/:userId', (req, res, next) => {
+router.get('/:userId', (req, res) => {
     const id= req.params.userId;
     if(id === 'special') {
         res.status(200).json({
@@ -28,7 +28,7 @@ router.get('/:userId', (req, res, next) => {
     }
 });
 
-router.patch('/:userId', (req, res, next) => {
+router.patch('/:userId', (req, res) => {
     const id = req.params.userId;
     res.status(200).json({
         message: 'You just updated user!',
@@ -36,7 +36,7 @@ router.patch('/:userId', (req, res, next) => {
     });
 });
 
-router.delete('/:userId', (req, res, next) => {
+router.delete('/:userId', (req, res) => {
     const id = req.params.userId;
     res.status(200).json({
         message: 'You just deleted user!',
