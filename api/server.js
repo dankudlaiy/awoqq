@@ -1,4 +1,4 @@
-//nodemon to start server
+//nodemon to run server
 
 const http = require('http');
 const app = require('./app');

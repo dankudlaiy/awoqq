@@ -19,7 +19,7 @@ module.exports = () => {
     });
 
     process.on('SIGINT', () => {
-        console.log('mongoose connection closed due to app termination');
+        console.log('mongoose connection and server were terminated');
 
         mongoose.connection.close(() => {
             process.exit(0);

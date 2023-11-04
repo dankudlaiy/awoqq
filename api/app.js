@@ -1,8 +1,10 @@
 const express = require('express');
 const morgan = require('morgan');
-const usersRoutes = require('./routes/users');
-const productsRoutes = require('./routes/product.route');
 const createError = require('http-errors');
+
+const productRoutes = require('./routes/product.route');
+const userRoutes = require('./routes/user.route');
+const userProductRoutes = require('./routes/userProduct.route');
 
 require('dotenv').config();
 
@@ -15,8 +17,9 @@ app.use(express.urlencoded({extended: true}));
 
 app.use(morgan('dev'));
 
-app.use('/users', usersRoutes);
-app.use('/products', productsRoutes);
+app.use('/products', productRoutes);
+app.use('/user', userRoutes);
+app.use('/userProduct', userProductRoutes);
 
 app.use((req, res, next) => {
     next(createError(404, "Not found"));
