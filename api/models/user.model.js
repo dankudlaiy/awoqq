@@ -4,7 +4,8 @@ const schema = mongoose.Schema
 const userSchema = new schema({
     chat_id: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     balance: {
         type: Number,

@@ -12,12 +12,16 @@ module.exports = {
 
             res.send(result);
         } catch (error) {
-            console.log(error.message);
-
             if(error.name === 'ValidationError') {
                 next(createError(422, error.message));
                 return;
             }
+
+            if(error.name === 'MongoServerError') {
+                return;
+            }
+
+            console.log(error.message);
 
             next(error);
         }

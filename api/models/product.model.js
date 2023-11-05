@@ -9,7 +9,11 @@ const productSchema = new schema({
      price: {
         type: Number,
          required: true
-     }
+     },
+    photo: {
+        type: Buffer,
+        required: true
+    }
 })
 
 const product = mongoose.model('product', productSchema)
