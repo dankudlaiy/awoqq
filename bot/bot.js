@@ -152,7 +152,7 @@ bot.on('photo', async(msg) => {
         let photo = msg.photo[0];
 
         msg.photo.forEach((p) => {
-            if(p.file_size < 28000) {
+            if(p.file_size < 200000) {
                 photo = p;
             }
         });
@@ -162,8 +162,6 @@ bot.on('photo', async(msg) => {
         const fileLink = await bot.getFileLink(photoFileId);
 
         const arrayBuffer = await (await fetch(fileLink)).arrayBuffer();
-
-        //need to fix img res
 
         const buffer = Buffer.from(arrayBuffer);
 
