@@ -18,8 +18,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(morgan('dev'));
 
 app.use('/products', productRoutes);
-app.use('/user', userRoutes);
-app.use('/userProduct', userProductRoutes);
+app.use('/users', userRoutes);
+app.use('/userProducts', userProductRoutes);
 
 app.use((req, res, next) => {
     next(createError(404, "Not found"));

@@ -12,6 +12,9 @@ router.get('/', userController.getAllUsers);
 //get a single user
 router.get('/:id', userController.getUserById);
 
+//get a user by chat id
+router.get('/chatId/:id', userController.getUserByChatId);
+
 //update user
 router.patch('/:id', userController.updateUserById);
 

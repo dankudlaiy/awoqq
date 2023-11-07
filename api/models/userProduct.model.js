@@ -2,12 +2,12 @@ const mongoose = require('mongoose')
 const schema = mongoose.Schema
 
 const userProductSchema = new schema({
-    userId: {
+    user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'user',
         required: true
     },
-    productId: {
+    product_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'product',
         required: true

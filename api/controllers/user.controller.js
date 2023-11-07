@@ -61,6 +61,29 @@ module.exports = {
         }
     },
 
+    getUserByChatId: async (req, res, next) => {
+        const id = req.params.id;
+
+        try{
+            const user = await User.findOne({chat_id: id}).exec();
+
+            if(!user) {
+                throw createError(404, "User does not exists.");
+            }
+
+            res.send(user);
+        } catch (error) {
+            console.log(error.message);
+
+            if(error instanceof mongoose.CastError) {
+                next(createError(400, "Invalid user id."));
+                return;
+            }
+
+            next(error);
+        }
+    },
+
     updateUserById: async (req, res, next) => {
         const id = req.params.id;
 

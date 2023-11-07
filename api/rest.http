@@ -26,3 +26,18 @@ Content-Type: application/json
 {
   "price": 111
 }
+
+### get user by chat id
+GET http://localhost:3000/users/chatId/923140210
+
+### create userProduct
+POST http://localhost:3000/userProducts/
+Content-Type: application/json
+
+{
+  "user_id": "65495fbd90b51d99712db679",
+  "product_id": "654960a24afd5779f0b7b74b"
+}
+
+### get list of products owned by user
+GET http://localhost:3000/products/userId/65495fbd90b51d99712db679
