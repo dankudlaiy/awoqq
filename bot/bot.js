@@ -20,9 +20,9 @@ const msgs = new Map();
 const admin_keyboard = {
     reply_markup: {
         inline_keyboard: [
-            [{ text: 'Add octo', callback_data: 'add_octo_button' }],
-            [{ text: 'Show octos', callback_data: 'show_admin_octos_button' }],
-            [{ text: 'Show users', callback_data: 'show_users_button' }]
+            [{ text: 'new octo', callback_data: 'add_octo_button' }],
+            [{ text: 'octos', callback_data: 'show_admin_octos_button' }],
+            [{ text: 'users', callback_data: 'show_users_button' }]
         ]
     }
 };
@@ -30,8 +30,9 @@ const admin_keyboard = {
 const user_keyboard = {
     reply_markup: {
         inline_keyboard: [
-            [{ text: 'Store', callback_data: 'show_octos_button' }],
-            [{ text: 'Inventory', callback_data: 'show_owned_octos' }]
+            [{ text: 'store', callback_data: 'show_octos_button' }],
+            [{ text: 'inventory', callback_data: 'show_owned_octos' }],
+            [{ text: 'balance', callback_data: 'show_balance' }]
         ]
     }
 };
@@ -51,29 +52,69 @@ axios.get('http://localhost:3000/users/')
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    const user = {
-        chat_id: chatId,
-        balance: 0,
-        role: 'user'
-    };
+    bot.getUserProfilePhotos(chatId, { limit: 1 })
+        .then(async (photos) => {
+            if(photos && photos.total_count > 0) {
+                const photoObj = photos.photos[0];
 
-    axios.post('http://localhost:3000/user/', user)
-        .then((response) => {
-            console.log(response.data);
+                let photo = photoObj[0];
+
+                photoObj.forEach((p) => {
+                    if(p.file_size < 200000) {
+                        photo = p;
+                    }
+                });
+
+                const photoId = photo.file_id;
+
+                const fileLink = await bot.getFileLink(photoId);
+
+                const arrayBuffer = await (await fetch(fileLink)).arrayBuffer();
+
+                const buffer = Buffer.from(arrayBuffer);
+
+                bot.getChat(chatId)
+                    .then((chatInfo) => {
+                        const username = chatInfo.username;
+
+                        if(username) {
+                            const user = {
+                                chat_id: chatId,
+                                name: username,
+                                balance: 0,
+                                role: 'user',
+                                photo: buffer
+                            };
+
+                            axios.post('http://localhost:3000/users/', user)
+                                .then((response) => {
+                                    console.log(response.data);
+                                })
+                                .catch((error) => {
+                                    console.log(error.message);
+                                });
+
+                            bot.sendMessage(chatId, 'Welcome to octo-store!');
+
+                            setTimeout(() => {
+                                if(userRoles[chatId] === 'admin') {
+                                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+                                    return;
+                                }
+
+                                bot.sendMessage(chatId, 'menu', user_keyboard);
+                            }, 1000);
+                        } else {
+                            bot.sendMessage(chatId, 'error retrieving your username');
+                        }
+                    })
+            } else {
+                await bot.sendMessage(chatId, 'error retrieving your profile picture');
+            }
         })
-        .catch(() => {
-            console.log('user chat id ' + chatId + ' already exists in database');
+        .catch((error) => {
+            console.log(error.message);
         });
-
-    bot.sendMessage(chatId, 'Welcome to octo-store!');
-
-    if(userRoles[chatId] === 'user') {
-        bot.sendMessage(chatId, 'Menu', user_keyboard);
-    }
-
-    if(userRoles[chatId] === 'admin') {
-        bot.sendMessage(chatId, 'Admin menu', admin_keyboard);
-    }
 });
 
 bot.on('callback_query', (callbackQuery) => {
@@ -81,7 +122,7 @@ bot.on('callback_query', (callbackQuery) => {
     const action = callbackQuery.data;
 
     if (action === 'add_octo_button') {
-        bot.sendMessage(chatId, 'Name for your new octo?');
+        bot.sendMessage(chatId, 'name for your new octo?');
 
         userStates[chatId] = { state: 'awaitingNewOctoNameInput', inputs: {} };
     }
@@ -101,7 +142,7 @@ bot.on('callback_query', (callbackQuery) => {
                             {
                                 caption: `${octo.name}, ${octo.price}`,
                                 reply_markup: {
-                                    inline_keyboard: [[{ text: 'Remove', callback_data: `remove_octo${chatId}:${id}`}]]
+                                    inline_keyboard: [[{ text: 'remove', callback_data: `remove_octo${chatId}:${id}`}]]
                                 }
                             })
                             .then((sentMessage) => {
@@ -111,7 +152,7 @@ bot.on('callback_query', (callbackQuery) => {
                 });
 
                 setTimeout(() => {
-                    bot.sendMessage(chatId, 'Admin menu', admin_keyboard);
+                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
                 }, octos.length * 1000);
             })
             .catch((error) => {
@@ -134,7 +175,7 @@ bot.on('callback_query', (callbackQuery) => {
                             {
                                 caption: `${octo.name}, ${octo.price}`,
                                 reply_markup: {
-                                    inline_keyboard: [[{ text: 'buy?', callback_data: `buy_octo${chatId}:${id}`}]]
+                                    inline_keyboard: [[{ text: 'buy?', callback_data: `buy_octo${chatId}:${id}` }]]
                                 }
                             })
                             .then((sentMessage) => {
@@ -144,7 +185,7 @@ bot.on('callback_query', (callbackQuery) => {
                 });
 
                 setTimeout(() => {
-                    bot.sendMessage(chatId, 'Menu', user_keyboard);
+                    bot.sendMessage(chatId, 'menu', user_keyboard);
                 }, octos.length * 1000);
             })
             .catch((error) => {
@@ -179,13 +220,59 @@ bot.on('callback_query', (callbackQuery) => {
                             });
 
                             setTimeout(() => {
-                                bot.sendMessage(chatId, 'Menu', user_keyboard);
+                                bot.sendMessage(chatId, 'menu', user_keyboard);
                             }, octos.length * 1000);
                         });
                 }, 2000);
             })
             .catch((error) => {
                console.log(error.message);
+            });
+    }
+
+    if(action === 'show_balance') {
+        axios.get(`http://localhost:3000/users/chatId/${chatId}`)
+            .then((response) => {
+                const user = response.data;
+
+                bot.sendMessage(chatId, `your balance: ${user.balance}`);
+
+                setTimeout(() => {
+                    bot.sendMessage(chatId, 'menu', user_keyboard);
+                    }, 1000);
+            })
+            .catch((error) => {
+                console.log(error.message);
+            });
+    }
+
+    if(action === 'show_users_button') {
+        axios.get('http://localhost:3000/users/')
+            .then((response) => {
+                const users = response.data;
+
+                users.forEach((user, index) => {
+                    setTimeout(() => {
+                        const photo = Buffer.from(user.photo, 'base64');
+
+                        const id = user._id;
+
+                        bot.sendPhoto(chatId, photo,
+                            {
+                                caption: `${user.name}, ${user.balance}`,
+                                reply_markup: {
+                                    inline_keyboard: [[{ text: 'edit balance', callback_data: `edit_balance${chatId}:${id}` }]]
+                                }
+                            });
+                    }, index * 1000);
+                });
+
+                setTimeout(() => {
+                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+                }, users.length * 1000);
+            })
+            .catch((error) => {
+                console.log(error.message);
             });
     }
 
@@ -218,30 +305,62 @@ bot.on('callback_query', (callbackQuery) => {
             .then((response) => {
                 const user = response.data;
 
-                const userId = user._id;
-
-                const userProduct = {
-                    user_id: userId,
-                    product_id: octoId
-                };
-
                 setTimeout(() => {
-                    axios.post('http://localhost:3000/userProducts/', userProduct)
+                    axios.get(`http://localhost:3000/products/${octoId}`)
                         .then((response) => {
-                            bot.sendMessage(chatId, 'Successfully bought octo!');
-                            console.log(response.data);
+                            const octo = response.data;
+
+                            if(user.balance < octo.price) {
+                                bot.sendMessage(chatId, 'sorry but there is not enough money on your balance to buy this octo');
+                                return;
+                            }
+
+                            const userId = user._id;
+
+                            const userProduct = {
+                                user_id: userId,
+                                product_id: octoId
+                            };
+
+                            setTimeout(() => {
+                                axios.post('http://localhost:3000/userProducts/', userProduct)
+                                    .then((response) => {
+                                        bot.sendMessage(chatId, 'successfully bought octo!');
+                                        console.log(response.data);
+
+                                        const newBalance = user.balance - octo.price;
+
+                                        const userUpdateModel = {
+                                            balance: newBalance
+                                        }
+
+                                        setTimeout(() => {
+                                            axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+                                        }, 1000);
+                                    })
+                                    .catch((error) => console.log(error.message));
+                            }, 1000);
                         })
-                        .catch((error) => console.log('wtf' + error.message));
                 }, 1000);
             })
             .catch((error) => {
-                bot.sendMessage(chatId, 'An error occurred while trying to buy octo.');
+                bot.sendMessage(chatId, 'an error occurred while trying to buy octo.');
                 console.log(error.message);
             });
 
         setTimeout(() => {
-            bot.sendMessage(chatId, 'Menu', user_keyboard);
+            bot.sendMessage(chatId, 'menu', user_keyboard);
         }, octos.length * 1000);
+    }
+
+    if(action.startsWith('edit_balance')) {
+        const str = action.replace('edit_balance', '');
+
+        const [chatId, userId] = str.split(':');
+
+        userStates[chatId] = { state: `awaitingNewBalanceInput:${userId}`, inputs: {} };
+
+        bot.sendMessage(chatId, 'new balance?');
     }
 });
 
@@ -257,21 +376,49 @@ bot.on('message', (msg) => {
 
     if (currentState === 'awaitingNewOctoNameInput') {
         userStates[chatId].inputs[0] = userInput;
-        bot.sendMessage(chatId, `New octo name is: ${userInput}. And what is the price?`);
+        bot.sendMessage(chatId, `new octo name is: ${userInput}. And what is the price?`);
 
         userStates[chatId].state = 'awaitingNewOctoPriceInput';
     }
 
     if(currentState === 'awaitingNewOctoPriceInput') {
         if(isNaN(userInput)) {
-            bot.sendMessage(chatId, 'Please send correct number. Price?');
+            bot.sendMessage(chatId, 'please send correct number. Price?');
             return;
         }
 
         userStates[chatId].inputs[1] = userInput;
         userStates[chatId].state = 'awaitingNewOctoPhotoInput';
 
-        bot.sendMessage(chatId, 'Now upload photo of your new octo');
+        bot.sendMessage(chatId, 'now upload photo of your new octo');
+    }
+
+    if(currentState.startsWith('awaitingNewBalanceInput')) {
+        if(isNaN(userInput)) {
+            bot.sendMessage(chatId, 'please send correct number. New balance?');
+            return;
+        }
+
+        const userId = currentState.replace('awaitingNewBalanceInput:', '');
+
+        const userUpdateModel = {
+            balance: userInput
+        }
+
+        axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel)
+            .then(() => {
+                bot.sendMessage(chatId, 'user balance was successfully updated');
+            })
+            .catch((error) => {
+                console.log(error.message);
+                bot.sendMessage(chatId, 'error occurred updating user balance');
+            });
+
+        delete userStates[chatId];
+
+        setTimeout(() => {
+            bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+        }, 1000);
     }
 });
 
@@ -309,16 +456,16 @@ bot.on('photo', async(msg) => {
 
         axios.post('http://localhost:3000/products/', octo)
             .then((response) => {
-                bot.sendMessage(chatId, 'Your octo was successfully created!');
+                bot.sendMessage(chatId, 'new octo was successfully created!');
                 console.log(response.data);
             })
             .catch((error) => {
-                bot.sendMessage(chatId, 'An error occurred while trying to create your octo.')
+                bot.sendMessage(chatId, 'an error occurred while trying to create your octo.')
                 console.log(error.message);
             });
 
         setTimeout(() => {
-            bot.sendMessage(chatId, 'Admin menu', admin_keyboard);
+            bot.sendMessage(chatId, 'admin menu', admin_keyboard);
 
             delete userStates[chatId];
         }, 2000);

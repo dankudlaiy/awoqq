@@ -7,12 +7,20 @@ const userSchema = new schema({
         required: true,
         unique: true
     },
+    name: {
+        type: String,
+        required: true
+    },
     balance: {
         type: Number,
         required: true
     },
     role: {
         type: String,
+        required: true
+    },
+    photo: {
+        type: Buffer,
         required: true
     }
 })
