@@ -1,2 +1,2 @@
-# octo-store
-ideal octopus store : )
+# plshs
+plushies store : )

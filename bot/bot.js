@@ -20,8 +20,8 @@ const msgs = new Map();
 const admin_keyboard = {
     reply_markup: {
         inline_keyboard: [
-            [{ text: 'new octo', callback_data: 'add_octo_button' }],
-            [{ text: 'octos', callback_data: 'show_admin_octos_button' }],
+            [{ text: 'new plushie', callback_data: 'add_product_button' }],
+            [{ text: 'plushies', callback_data: 'show_admin_products_button' }],
             [{ text: 'users', callback_data: 'show_users_button' }]
         ]
     }
@@ -30,372 +30,298 @@ const admin_keyboard = {
 const user_keyboard = {
     reply_markup: {
         inline_keyboard: [
-            [{ text: 'store', callback_data: 'show_octos_button' }],
-            [{ text: 'inventory', callback_data: 'show_owned_octos' }],
+            [{ text: 'store', callback_data: 'show_products_button' }],
+            [{ text: 'inventory', callback_data: 'show_owned_products' }],
             [{ text: 'balance', callback_data: 'show_balance' }]
         ]
     }
 };
 
-axios.get('http://localhost:3000/users/')
-    .then((response) => {
-        const users = response.data;
+try {
+    const initUsersResponse = await axios.get('http://localhost:3000/users/');
 
-        users.forEach((user) => {
-            userRoles[user.chat_id] = user.role;
-        });
-    })
-    .catch((error) => {
-        console.log(error.message);
+    const users = initUsersResponse.data;
+
+    users.forEach((user) => {
+        userRoles[user.chat_id] = user.role;
     });
-
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-
-    bot.getUserProfilePhotos(chatId, { limit: 1 })
-        .then(async (photos) => {
-            if(photos && photos.total_count > 0) {
-                const photoObj = photos.photos[0];
-
-                let photo = photoObj[0];
-
-                photoObj.forEach((p) => {
-                    if(p.file_size < 200000) {
-                        photo = p;
-                    }
-                });
-
-                const photoId = photo.file_id;
-
-                const fileLink = await bot.getFileLink(photoId);
-
-                const arrayBuffer = await (await fetch(fileLink)).arrayBuffer();
-
-                const buffer = Buffer.from(arrayBuffer);
-
-                bot.getChat(chatId)
-                    .then((chatInfo) => {
-                        const username = chatInfo.username;
-
-                        if(username) {
-                            const user = {
-                                chat_id: chatId,
-                                name: username,
-                                balance: 0,
-                                role: 'user',
-                                photo: buffer
-                            };
-
-                            axios.post('http://localhost:3000/users/', user)
-                                .then((response) => {
-                                    console.log(response.data);
-                                })
-                                .catch((error) => {
-                                    console.log(error.message);
-                                });
-
-                            bot.sendMessage(chatId, 'Welcome to octo-store!');
-
-                            setTimeout(() => {
-                                if(userRoles[chatId] === 'admin') {
-                                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-                                    return;
-                                }
-
-                                bot.sendMessage(chatId, 'menu', user_keyboard);
-                            }, 1000);
-                        } else {
-                            bot.sendMessage(chatId, 'error retrieving your username');
-                        }
-                    })
-            } else {
-                await bot.sendMessage(chatId, 'error retrieving your profile picture');
-            }
-        })
-        .catch((error) => {
-            console.log(error.message);
-        });
-});
-
-bot.on('callback_query', (callbackQuery) => {
-    const chatId = callbackQuery.message.chat.id;
-    const action = callbackQuery.data;
-
-    if (action === 'add_octo_button') {
-        bot.sendMessage(chatId, 'name for your new octo?');
-
-        userStates[chatId] = { state: 'awaitingNewOctoNameInput', inputs: {} };
-    }
-
-    if (action === 'show_admin_octos_button') {
-        axios.get('http://localhost:3000/products/')
-            .then((response) => {
-                const octos = response.data;
-
-                octos.forEach((octo, index) => {
-                    setTimeout(() => {
-                        const photo = Buffer.from(octo.photo, 'base64');
-
-                        const id = octo._id;
-
-                        bot.sendPhoto(chatId, photo,
-                            {
-                                caption: `${octo.name}, ${octo.price}`,
-                                reply_markup: {
-                                    inline_keyboard: [[{ text: 'remove', callback_data: `remove_octo${chatId}:${id}`}]]
-                                }
-                            })
-                            .then((sentMessage) => {
-                                msgs[`${chatId}:${id}`] = sentMessage.message_id;
-                            });
-                    }, index * 1000);
-                });
-
-                setTimeout(() => {
-                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-                }, octos.length * 1000);
-            })
-            .catch((error) => {
-                console.log(error.message);
-            });
-    }
-
-    if(action === 'show_octos_button') {
-        axios.get('http://localhost:3000/products/')
-            .then((response) => {
-                const octos = response.data;
-
-                octos.forEach((octo, index) => {
-                    setTimeout(() => {
-                        const photo = Buffer.from(octo.photo, 'base64');
-
-                        const id = octo._id;
-
-                        bot.sendPhoto(chatId, photo,
-                            {
-                                caption: `${octo.name}, ${octo.price}`,
-                                reply_markup: {
-                                    inline_keyboard: [[{ text: 'buy?', callback_data: `buy_octo${chatId}:${id}` }]]
-                                }
-                            })
-                            .then((sentMessage) => {
-                                msgs[`${chatId}:${id}`] = sentMessage.message_id;
-                            });
-                    }, index * 1000);
-                });
-
-                setTimeout(() => {
-                    bot.sendMessage(chatId, 'menu', user_keyboard);
-                }, octos.length * 1000);
-            })
-            .catch((error) => {
-                console.log(error.message);
-            });
-    }
-
-    if(action === 'show_owned_octos') {
-        axios.get(`http://localhost:3000/users/chatId/${chatId}`)
-            .then((response) => {
-                const user = response.data;
-
-                const userId = user._id;
-
-                setTimeout(() => {
-                    axios.get(`http://localhost:3000/products/userId/${userId}`)
-                        .then((response) => {
-                            const octos = response.data;
-
-                            octos.forEach((octo, index) => {
-                                setTimeout(() => {
-                                    const photo = Buffer.from(octo.photo, 'base64');
-
-                                    const id = octo._id;
-
-                                    bot.sendPhoto(chatId, photo,
-                                        { caption: `${octo.name}, ${octo.price}` })
-                                        .then((sentMessage) => {
-                                            msgs[`${chatId}:${id}`] = sentMessage.message_id;
-                                        });
-                                }, index * 1000);
-                            });
-
-                            setTimeout(() => {
-                                bot.sendMessage(chatId, 'menu', user_keyboard);
-                            }, octos.length * 1000);
-                        });
-                }, 2000);
-            })
-            .catch((error) => {
-               console.log(error.message);
-            });
-    }
-
-    if(action === 'show_balance') {
-        axios.get(`http://localhost:3000/users/chatId/${chatId}`)
-            .then((response) => {
-                const user = response.data;
-
-                bot.sendMessage(chatId, `your balance: ${user.balance}`);
-
-                setTimeout(() => {
-                    bot.sendMessage(chatId, 'menu', user_keyboard);
-                    }, 1000);
-            })
-            .catch((error) => {
-                console.log(error.message);
-            });
-    }
-
-    if(action === 'show_users_button') {
-        axios.get('http://localhost:3000/users/')
-            .then((response) => {
-                const users = response.data;
-
-                users.forEach((user, index) => {
-                    setTimeout(() => {
-                        const photo = Buffer.from(user.photo, 'base64');
-
-                        const id = user._id;
-
-                        bot.sendPhoto(chatId, photo,
-                            {
-                                caption: `${user.name}, ${user.balance}`,
-                                reply_markup: {
-                                    inline_keyboard: [[{ text: 'edit balance', callback_data: `edit_balance${chatId}:${id}` }]]
-                                }
-                            });
-                    }, index * 1000);
-                });
-
-                setTimeout(() => {
-                    bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-                }, users.length * 1000);
-            })
-            .catch((error) => {
-                console.log(error.message);
-            });
-    }
-
-    if(action.startsWith('remove_octo')) {
-        const str = action.replace('remove_octo', '');
-
-        const [chatId, octoId] = str.split(':');
-
-        const msgId = msgs[str];
-
-        axios.delete(`http://localhost:3000/products/${octoId}`)
-            .then(() => {
-                console.log(`successfully deleted octo id ${octoId} from db`);
-            })
-            .catch(() => {
-                console.log(`error deleting octo id ${octoId} from db`);
-            });
-
-        bot.deleteMessage(chatId, msgId);
-
-        delete msgs[str];
-    }
-
-    if(action.startsWith('buy_octo')) {
-        const str = action.replace('buy_octo', '');
-
-        const [chatId, octoId] = str.split(':');
-
-        axios.get(`http://localhost:3000/users/chatId/${chatId}`)
-            .then((response) => {
-                const user = response.data;
-
-                setTimeout(() => {
-                    axios.get(`http://localhost:3000/products/${octoId}`)
-                        .then((response) => {
-                            const octo = response.data;
-
-                            if(user.balance < octo.price) {
-                                bot.sendMessage(chatId, 'sorry but there is not enough money on your balance to buy this octo');
-                                return;
-                            }
-
-                            const userId = user._id;
-
-                            const userProduct = {
-                                user_id: userId,
-                                product_id: octoId
-                            };
-
-                            setTimeout(() => {
-                                axios.post('http://localhost:3000/userProducts/', userProduct)
-                                    .then((response) => {
-                                        bot.sendMessage(chatId, 'successfully bought octo!');
-                                        console.log(response.data);
-
-                                        const newBalance = user.balance - octo.price;
-
-                                        const userUpdateModel = {
-                                            balance: newBalance
-                                        }
-
-                                        setTimeout(() => {
-                                            axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
-                                        }, 1000);
-                                    })
-                                    .catch((error) => console.log(error.message));
-                            }, 1000);
-                        })
-                }, 1000);
-            })
-            .catch((error) => {
-                bot.sendMessage(chatId, 'an error occurred while trying to buy octo.');
-                console.log(error.message);
-            });
-
-        setTimeout(() => {
-            bot.sendMessage(chatId, 'menu', user_keyboard);
-        }, octos.length * 1000);
-    }
-
-    if(action.startsWith('edit_balance')) {
-        const str = action.replace('edit_balance', '');
-
-        const [chatId, userId] = str.split(':');
-
-        userStates[chatId] = { state: `awaitingNewBalanceInput:${userId}`, inputs: {} };
-
-        bot.sendMessage(chatId, 'new balance?');
-    }
-});
-
-bot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-    const userInput = msg.text;
-
-    let currentState = 'default';
-
+} catch(error) {
+    console.log(error.message);
+}
+
+bot.onText(/\/start/, async (msg) => {
     try{
-        currentState = userStates[chatId].state;
-    } catch (error) {}
+        const chatId = msg.chat.id;
 
-    if (currentState === 'awaitingNewOctoNameInput') {
+        const photos = await bot.getUserProfilePhotos(chatId, { limit: 1 });
+
+        if(photos && photos.total_count > 0) {
+            const photoObj = photos.photos[0];
+
+            let photo = photoObj[0];
+
+            photoObj.forEach((p) => {
+                if(p.file_size < 200000) {
+                    photo = p;
+                }
+            });
+
+            const photoId = photo.file_id;
+
+            const fileLink = await bot.getFileLink(photoId);
+
+            const arrayBuffer = await (await fetch(fileLink)).arrayBuffer();
+
+            const buffer = Buffer.from(arrayBuffer);
+
+            const chatInfo = await bot.getChat(chatId);
+
+            const username = chatInfo.username;
+
+            if(username) {
+                const user = {
+                    chat_id: chatId,
+                    name: username,
+                    balance: 0,
+                    role: 'user',
+                    photo: buffer
+                };
+
+                await axios.post('http://localhost:3000/users/', user);
+
+                await bot.sendMessage(chatId, 'Welcome to plushies-store!');
+
+                if(userRoles[chatId] === 'admin') {
+                    await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+                    return;
+                }
+
+                await bot.sendMessage(chatId, 'menu', user_keyboard);
+            } else {
+                await bot.sendMessage(chatId, 'error retrieving your username');
+            }
+        } else {
+            await bot.sendMessage(chatId, 'error retrieving your profile picture');
+        }
+    } catch (error) {
+        console.log(error.message);
+    }
+});
+
+bot.on('callback_query', async (callbackQuery) => {
+    try{
+        const chatId = callbackQuery.message.chat.id;
+        const action = callbackQuery.data;
+
+        if (action === 'add_product_button') {
+            await bot.sendMessage(chatId, 'name for your new plushie?');
+
+            userStates[chatId] = { state: 'awaitingNewProductNameInput', inputs: {} };
+        }
+
+        if (action === 'show_admin_products_button') {
+            let response = await axios.get('http://localhost:3000/products/');
+
+            const products = response.data;
+
+            for (const product of products) {
+                const photo = Buffer.from(product.photo, 'base64');
+
+                const id = product._id;
+
+                const sentMessage = await bot.sendPhoto(chatId, photo,
+                    {
+                        caption: `${product.name}, ${product.price}`,
+                        reply_markup: {
+                            inline_keyboard: [[{ text: 'remove', callback_data: `remove_product${chatId}:${id}`}]]
+                        }
+                    });
+
+                msgs[`${chatId}:${id}`] = sentMessage.message_id;
+            }
+
+            await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+        }
+
+        if (action === 'show_products_button') {
+            let response = await axios.get('http://localhost:3000/products/');
+
+            const products = response.data;
+
+            for (const product of products) {
+                const photo = Buffer.from(product.photo, 'base64');
+
+                const id = product._id;
+
+                const sentMessage = await bot.sendPhoto(chatId, photo,
+                    {
+                        caption: `${product.name}, ${product.price}`,
+                        reply_markup: {
+                            inline_keyboard: [[{ text: 'buy?', callback_data: `buy_product${chatId}:${id}` }]]
+                        }
+                    });
+
+                msgs[`${chatId}:${id}`] = sentMessage.message_id;
+            }
+
+            await bot.sendMessage(chatId, 'menu', user_keyboard);
+        }
+
+        if (action === 'show_owned_products') {
+            let response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`);
+
+            const user = response.data;
+
+            const userId = user._id;
+
+            response = await axios.get(`http://localhost:3000/products/userId/${userId}`);
+
+            const products = response.data;
+
+            for (const product of products) {
+                const photo = Buffer.from(product.photo, 'base64');
+
+                const id = product._id;
+
+                const sentMessage = await bot.sendPhoto(chatId, photo,
+                    { caption: `${product.name}, ${product.price}` });
+
+                msgs[`${chatId}:${id}`] = sentMessage.message_id;
+            }
+
+            await bot.sendMessage(chatId, 'menu', user_keyboard);
+        }
+
+        if (action === 'show_balance') {
+            const response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`);
+
+            const user = response.data;
+
+            await bot.sendMessage(chatId, `your balance: ${user.balance}`);
+
+            await bot.sendMessage(chatId, 'menu', user_keyboard);
+        }
+
+        if (action === 'show_users_button') {
+            const response = await axios.get('http://localhost:3000/users/')
+
+            const users = response.data;
+
+            for (const user of users) {
+                const photo = Buffer.from(user.photo, 'base64');
+
+                const id = user._id;
+
+                await bot.sendPhoto(chatId, photo,
+                    {
+                        caption: `${user.name}, ${user.balance}`,
+                        reply_markup: {
+                            inline_keyboard: [[{ text: 'edit balance', callback_data: `edit_balance${chatId}:${id}` }]]
+                        }
+                    });
+            }
+
+            await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+        }
+
+        if (action.startsWith('remove_product')) {
+            const str = action.replace('remove_product', '');
+
+            const [chatId, productId] = str.split(':');
+
+            const msgId = msgs[str];
+
+            await axios.delete(`http://localhost:3000/products/${productId}`);
+
+            await bot.deleteMessage(chatId, msgId);
+
+            delete msgs[str];
+        }
+
+        if (action.startsWith('buy_product')) {
+            const str = action.replace('buy_product', '');
+
+            const [chatId, productId] = str.split(':');
+
+            let response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`)
+
+            const user = response.data;
+
+            response = await axios.get(`http://localhost:3000/products/${productId}`);
+
+            const product = response.data;
+
+            if(user.balance < product.price) {
+                await bot.sendMessage(chatId, 'sorry but there is not enough money on your balance to buy this plushie');
+                return;
+            }
+
+            const userId = user._id;
+
+            const userProduct = {
+                user_id: userId,
+                product_id: productId
+            };
+
+            response = await axios.post('http://localhost:3000/userProducts/', userProduct);
+
+            await bot.sendMessage(chatId, 'successfully bought plushie!');
+            console.log(response.data);
+
+            const newBalance = user.balance - product.price;
+
+            const userUpdateModel = {
+                balance: newBalance
+            }
+
+            await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+
+            await bot.sendMessage(chatId, 'menu', user_keyboard);
+        }
+
+        if (action.startsWith('edit_balance')) {
+            const str = action.replace('edit_balance', '');
+
+            const [chatId, userId] = str.split(':');
+
+            userStates[chatId] = { state: `awaitingNewBalanceInput:${userId}`, inputs: {} };
+
+            await bot.sendMessage(chatId, 'new balance?');
+        }
+    } catch (error) {
+        console.log(error.message);
+    }
+});
+
+bot.on('message', async (msg) => {
+    try{
+        const chatId = msg.chat.id;
+        const userInput = msg.text;
+
+        let currentState = userStates[chatId].state;
+
+        if (currentState === 'awaitingNewProductNameInput') {
         userStates[chatId].inputs[0] = userInput;
-        bot.sendMessage(chatId, `new octo name is: ${userInput}. And what is the price?`);
+        await bot.sendMessage(chatId, `new plushie name is: ${userInput}. And what is the price?`);
 
-        userStates[chatId].state = 'awaitingNewOctoPriceInput';
+        userStates[chatId].state = 'awaitingNewProductPriceInput';
     }
 
-    if(currentState === 'awaitingNewOctoPriceInput') {
+        if(currentState === 'awaitingNewProductPriceInput') {
         if(isNaN(userInput)) {
-            bot.sendMessage(chatId, 'please send correct number. Price?');
+            await bot.sendMessage(chatId, 'please send correct number. Price?');
             return;
         }
 
         userStates[chatId].inputs[1] = userInput;
-        userStates[chatId].state = 'awaitingNewOctoPhotoInput';
+        userStates[chatId].state = 'awaitingNewProductPhotoInput';
 
-        bot.sendMessage(chatId, 'now upload photo of your new octo');
+        await bot.sendMessage(chatId, 'now upload photo of your new plushie');
     }
 
-    if(currentState.startsWith('awaitingNewBalanceInput')) {
+        if(currentState.startsWith('awaitingNewBalanceInput')) {
         if(isNaN(userInput)) {
-            bot.sendMessage(chatId, 'please send correct number. New balance?');
+            await bot.sendMessage(chatId, 'please send correct number. New balance?');
             return;
         }
 
@@ -405,20 +331,16 @@ bot.on('message', (msg) => {
             balance: userInput
         }
 
-        axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel)
-            .then(() => {
-                bot.sendMessage(chatId, 'user balance was successfully updated');
-            })
-            .catch((error) => {
-                console.log(error.message);
-                bot.sendMessage(chatId, 'error occurred updating user balance');
-            });
+        await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+
+        await bot.sendMessage(chatId, 'user balance was successfully updated');
 
         delete userStates[chatId];
 
-        setTimeout(() => {
-            bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-        }, 1000);
+        await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+    }
+    } catch (error) {
+        console.log(error.message);
     }
 });
 
@@ -429,9 +351,8 @@ bot.on('photo', async(msg) => {
 
     try{
         currentState = userStates[chatId].state;
-    } catch (error) {}
 
-    if(currentState === 'awaitingNewOctoPhotoInput') {
+        if(currentState === 'awaitingNewProductPhotoInput') {
         let photo = msg.photo[0];
 
         msg.photo.forEach((p) => {
@@ -448,26 +369,19 @@ bot.on('photo', async(msg) => {
 
         const buffer = Buffer.from(arrayBuffer);
 
-        const octo = {
+        const product = {
             name: userStates[chatId].inputs[0],
             price: userStates[chatId].inputs[1],
             photo: buffer
         };
 
-        axios.post('http://localhost:3000/products/', octo)
-            .then((response) => {
-                bot.sendMessage(chatId, 'new octo was successfully created!');
-                console.log(response.data);
-            })
-            .catch((error) => {
-                bot.sendMessage(chatId, 'an error occurred while trying to create your octo.')
-                console.log(error.message);
-            });
+        await axios.post('http://localhost:3000/products/', product);
 
-        setTimeout(() => {
-            bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+        await bot.sendMessage(chatId, 'new plushie was successfully created!');
 
-            delete userStates[chatId];
-        }, 2000);
+        await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+    }
+    } catch (error) {
+        console.log(error.message);
     }
 });
