@@ -1,0 +1,43 @@
+### create a product
+POST http://localhost:3000/products
+Content-Type: application/json
+
+{
+  "name": "to delete",
+  "price": 654
+}
+
+### get list of products
+GET http://localhost:3000/products
+
+### get product by id
+GET http://localhost:3000/products/
+    654548aa230f9d9a413061ef
+
+### delete product by id
+DELETE http://localhost:3000/products/
+    65452758531a2ccca6d832da
+
+### update product by id
+PATCH http://localhost:3000/products/
+    654527e1531a2ccca6d832dc
+Content-Type: application/json
+
+{
+  "price": 111
+}
+
+### get user by chat id
+GET http://localhost:3000/users/chatId/923140210
+
+### create userProduct
+POST http://localhost:3000/userProducts/
+Content-Type: application/json
+
+{
+  "user_id": "65495fbd90b51d99712db679",
+  "product_id": "654960a24afd5779f0b7b74b"
+}
+
+### get list of products owned by user
+GET http://localhost:3000/products/userId/65495fbd90b51d99712db679
