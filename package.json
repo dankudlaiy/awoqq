@@ -4,7 +4,7 @@
   "description": "plushies store : )",
   "main": "api/server.js",
   "scripts": {
-    "start": "node api/server.js"
+    "start": "node bot/bot.js"
   },
   "keywords": [],
   "author": "",
