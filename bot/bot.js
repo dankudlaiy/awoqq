@@ -38,13 +38,14 @@ const user_keyboard = {
 };
 
 try {
-    const initUsersResponse = await axios.get('http://localhost:3000/users/');
+    axios.get('http://localhost:3000/users/')
+        .then((initUsersResponse) => {
+            const users = initUsersResponse.data;
 
-    const users = initUsersResponse.data;
-
-    users.forEach((user) => {
-        userRoles[user.chat_id] = user.role;
-    });
+            users.forEach((user) => {
+                userRoles[user.chat_id] = user.role;
+            });
+        });
 } catch(error) {
     console.log(error.message);
 }
@@ -52,6 +53,22 @@ try {
 bot.onText(/\/start/, async (msg) => {
     try{
         const chatId = msg.chat.id;
+
+        const usersResponse = await axios.get('http://localhost:3000/users/');
+
+        const users = usersResponse.data;
+
+        for(const user of users) {
+            if(user.chat_id === chatId.toString()) {
+                if(userRoles[chatId] === 'admin') {
+                    await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+                    return;
+                }
+
+                await bot.sendMessage(chatId, 'menu', user_keyboard);
+                return;
+            }
+        }
 
         const photos = await bot.getUserProfilePhotos(chatId, { limit: 1 });
 
@@ -90,11 +107,6 @@ bot.onText(/\/start/, async (msg) => {
                 await axios.post('http://localhost:3000/users/', user);
 
                 await bot.sendMessage(chatId, 'Welcome to plushies-store!');
-
-                if(userRoles[chatId] === 'admin') {
-                    await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-                    return;
-                }
 
                 await bot.sendMessage(chatId, 'menu', user_keyboard);
             } else {
@@ -184,7 +196,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 const id = product._id;
 
                 const sentMessage = await bot.sendPhoto(chatId, photo,
-                    { caption: `${product.name}, ${product.price}` });
+                    { caption: `${product.name}` });
 
                 msgs[`${chatId}:${id}`] = sentMessage.message_id;
             }
@@ -263,10 +275,9 @@ bot.on('callback_query', async (callbackQuery) => {
                 product_id: productId
             };
 
-            response = await axios.post('http://localhost:3000/userProducts/', userProduct);
+            await axios.post('http://localhost:3000/userProducts/', userProduct);
 
             await bot.sendMessage(chatId, 'successfully bought plushie!');
-            console.log(response.data);
 
             const newBalance = user.balance - product.price;
 
@@ -298,47 +309,49 @@ bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
         const userInput = msg.text;
 
-        let currentState = userStates[chatId].state;
+        if(userStates[chatId]) {
+            let currentState = userStates[chatId].state || 'default';
 
-        if (currentState === 'awaitingNewProductNameInput') {
-        userStates[chatId].inputs[0] = userInput;
-        await bot.sendMessage(chatId, `new plushie name is: ${userInput}. And what is the price?`);
+            if (currentState === 'awaitingNewProductNameInput') {
+                userStates[chatId].inputs[0] = userInput;
+                await bot.sendMessage(chatId, `new plushie name is: ${userInput}. And what is the price?`);
 
-        userStates[chatId].state = 'awaitingNewProductPriceInput';
-    }
+                userStates[chatId].state = 'awaitingNewProductPriceInput';
+            }
 
-        if(currentState === 'awaitingNewProductPriceInput') {
-        if(isNaN(userInput)) {
-            await bot.sendMessage(chatId, 'please send correct number. Price?');
-            return;
+            if (currentState === 'awaitingNewProductPriceInput') {
+                if (isNaN(userInput)) {
+                    await bot.sendMessage(chatId, 'please send correct number. Price?');
+                    return;
+                }
+
+                userStates[chatId].inputs[1] = userInput;
+                userStates[chatId].state = 'awaitingNewProductPhotoInput';
+
+                await bot.sendMessage(chatId, 'now upload photo of your new plushie');
+            }
+
+            if (currentState.startsWith('awaitingNewBalanceInput')) {
+                if (isNaN(userInput)) {
+                    await bot.sendMessage(chatId, 'please send correct number. New balance?');
+                    return;
+                }
+
+                const userId = currentState.replace('awaitingNewBalanceInput:', '');
+
+                const userUpdateModel = {
+                    balance: userInput
+                }
+
+                await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+
+                await bot.sendMessage(chatId, 'user balance was successfully updated');
+
+                delete userStates[chatId];
+
+                await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
+            }
         }
-
-        userStates[chatId].inputs[1] = userInput;
-        userStates[chatId].state = 'awaitingNewProductPhotoInput';
-
-        await bot.sendMessage(chatId, 'now upload photo of your new plushie');
-    }
-
-        if(currentState.startsWith('awaitingNewBalanceInput')) {
-        if(isNaN(userInput)) {
-            await bot.sendMessage(chatId, 'please send correct number. New balance?');
-            return;
-        }
-
-        const userId = currentState.replace('awaitingNewBalanceInput:', '');
-
-        const userUpdateModel = {
-            balance: userInput
-        }
-
-        await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
-
-        await bot.sendMessage(chatId, 'user balance was successfully updated');
-
-        delete userStates[chatId];
-
-        await bot.sendMessage(chatId, 'admin menu', admin_keyboard);
-    }
     } catch (error) {
         console.log(error.message);
     }
