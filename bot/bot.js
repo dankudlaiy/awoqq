@@ -9,6 +9,8 @@ require('dotenv').config();
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
+const api_uri = process.env.API_URI;
+
 console.log('bot is running');
 
 const userStates = {};
@@ -38,7 +40,7 @@ const user_keyboard = {
 };
 
 try {
-    axios.get('http://localhost:3000/users/')
+    axios.get(`${api_uri}/users/`)
         .then((initUsersResponse) => {
             const users = initUsersResponse.data;
 
@@ -54,7 +56,7 @@ bot.onText(/\/start/, async (msg) => {
     try{
         const chatId = msg.chat.id;
 
-        const usersResponse = await axios.get('http://localhost:3000/users/');
+        const usersResponse = await axios.get(`${api_uri}/users/`);
 
         const users = usersResponse.data;
 
@@ -104,7 +106,7 @@ bot.onText(/\/start/, async (msg) => {
                     photo: buffer
                 };
 
-                await axios.post('http://localhost:3000/users/', user);
+                await axios.post(`${api_uri}/users/`, user);
 
                 await bot.sendMessage(chatId, 'Welcome to plushies-store!');
 
@@ -132,7 +134,7 @@ bot.on('callback_query', async (callbackQuery) => {
         }
 
         if (action === 'show_admin_products_button') {
-            let response = await axios.get('http://localhost:3000/products/');
+            let response = await axios.get(`${api_uri}/products/`);
 
             const products = response.data;
 
@@ -156,7 +158,7 @@ bot.on('callback_query', async (callbackQuery) => {
         }
 
         if (action === 'show_products_button') {
-            let response = await axios.get('http://localhost:3000/products/');
+            let response = await axios.get(`${api_uri}/products/`);
 
             const products = response.data;
 
@@ -180,13 +182,13 @@ bot.on('callback_query', async (callbackQuery) => {
         }
 
         if (action === 'show_owned_products') {
-            let response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`);
+            let response = await axios.get(`${api_uri}/users/chatId/${chatId}`);
 
             const user = response.data;
 
             const userId = user._id;
 
-            response = await axios.get(`http://localhost:3000/products/userId/${userId}`);
+            response = await axios.get(`${api_uri}/products/userId/${userId}`);
 
             const products = response.data;
 
@@ -205,7 +207,7 @@ bot.on('callback_query', async (callbackQuery) => {
         }
 
         if (action === 'show_balance') {
-            const response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`);
+            const response = await axios.get(`${api_uri}/users/chatId/${chatId}`);
 
             const user = response.data;
 
@@ -215,7 +217,7 @@ bot.on('callback_query', async (callbackQuery) => {
         }
 
         if (action === 'show_users_button') {
-            const response = await axios.get('http://localhost:3000/users/')
+            const response = await axios.get(`${api_uri}/users/`)
 
             const users = response.data;
 
@@ -243,7 +245,7 @@ bot.on('callback_query', async (callbackQuery) => {
 
             const msgId = msgs[str];
 
-            await axios.delete(`http://localhost:3000/products/${productId}`);
+            await axios.delete(`${api_uri}/products/${productId}`);
 
             await bot.deleteMessage(chatId, msgId);
 
@@ -255,11 +257,11 @@ bot.on('callback_query', async (callbackQuery) => {
 
             const [chatId, productId] = str.split(':');
 
-            let response = await axios.get(`http://localhost:3000/users/chatId/${chatId}`)
+            let response = await axios.get(`${api_uri}/users/chatId/${chatId}`)
 
             const user = response.data;
 
-            response = await axios.get(`http://localhost:3000/products/${productId}`);
+            response = await axios.get(`${api_uri}/products/${productId}`);
 
             const product = response.data;
 
@@ -275,7 +277,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 product_id: productId
             };
 
-            await axios.post('http://localhost:3000/userProducts/', userProduct);
+            await axios.post(`${api_uri}/userProducts/`, userProduct);
 
             await bot.sendMessage(chatId, 'successfully bought plushie!');
 
@@ -285,7 +287,7 @@ bot.on('callback_query', async (callbackQuery) => {
                 balance: newBalance
             }
 
-            await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+            await axios.patch(`${api_uri}/users/${userId}`, userUpdateModel);
 
             await bot.sendMessage(chatId, 'menu', user_keyboard);
         }
@@ -343,7 +345,7 @@ bot.on('message', async (msg) => {
                     balance: userInput
                 }
 
-                await axios.patch(`http://localhost:3000/users/${userId}`, userUpdateModel);
+                await axios.patch(`${api_uri}/users/${userId}`, userUpdateModel);
 
                 await bot.sendMessage(chatId, 'user balance was successfully updated');
 
@@ -388,7 +390,7 @@ bot.on('photo', async(msg) => {
             photo: buffer
         };
 
-        await axios.post('http://localhost:3000/products/', product);
+        await axios.post(`${api_uri}/products/`, product);
 
         await bot.sendMessage(chatId, 'new plushie was successfully created!');
 
