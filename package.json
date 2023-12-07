@@ -2,7 +2,7 @@
   "name": "plshs",
   "version": "1.0.0",
   "description": "plushies store : )",
-  "main": "api/server.js",
+  "main": "bot/bot.js",
   "scripts": {
     "start": "node bot/bot.js"
   },

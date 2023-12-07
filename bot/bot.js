@@ -1,6 +1,8 @@
 process.env.NTBA_FIX_319 = '1';
 process.env.NTBA_FIX_350 = '0';
 
+const port = process.env.PORT;
+
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
