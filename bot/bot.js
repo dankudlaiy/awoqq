@@ -35,7 +35,7 @@ const user_keyboard = {
     reply_markup: {
         inline_keyboard: [
             [{ text: 'store', callback_data: 'show_products_button' }],
-            [{ text: 'inventory', callback_data: 'show_owned_products' }],
+            [{ text: 'sticker set', callback_data: 'show_sticker_set' }],
             [{ text: 'balance', callback_data: 'show_balance' }]
         ]
     }
@@ -169,21 +169,19 @@ bot.on('callback_query', async (callbackQuery) => {
 
                 const id = product._id;
 
-                const sentMessage = await bot.sendPhoto(chatId, photo,
+                await bot.sendPhoto(chatId, photo,
                     {
                         caption: `${product.name}, ${product.price}`,
                         reply_markup: {
                             inline_keyboard: [[{ text: 'buy?', callback_data: `buy_product${chatId}:${id}` }]]
                         }
                     });
-
-                msgs[`${chatId}:${id}`] = sentMessage.message_id;
             }
 
             await bot.sendMessage(chatId, 'menu', user_keyboard);
         }
 
-        if (action === 'show_owned_products') {
+        if (action === 'show_sticker_set') {
             let response = await axios.get(`${api_uri}/users/chatId/${chatId}`);
 
             const user = response.data;
@@ -194,16 +192,20 @@ bot.on('callback_query', async (callbackQuery) => {
 
             const products = response.data;
 
-            for (const product of products) {
-                const photo = Buffer.from(product.photo, 'base64');
+            if(products.length < 1) {
+                await bot.sendMessage(chatId, 'You dont have any plushies for now. Try to buy some at the store!');
 
-                const id = product._id;
+                await bot.sendMessage(chatId, 'menu', user_keyboard);
 
-                const sentMessage = await bot.sendPhoto(chatId, photo,
-                    { caption: `${product.name}` });
-
-                msgs[`${chatId}:${id}`] = sentMessage.message_id;
+                return;
             }
+
+            const stickerSet = await bot.getStickerSet(`${user.name}_tts_by_plshs_bot`);
+
+            const randomIndex = Math.floor(Math.random() * stickerSet.stickers.length);
+            const randomSticker = stickerSet.stickers[randomIndex];
+
+            await bot.sendSticker(chatId, randomSticker.file_id);
 
             await bot.sendMessage(chatId, 'menu', user_keyboard);
         }
@@ -281,8 +283,6 @@ bot.on('callback_query', async (callbackQuery) => {
 
             await axios.post(`${api_uri}/userProducts/`, userProduct);
 
-            await bot.sendMessage(chatId, 'successfully bought plushie!');
-
             const newBalance = user.balance - product.price;
 
             const userUpdateModel = {
@@ -290,6 +290,24 @@ bot.on('callback_query', async (callbackQuery) => {
             }
 
             await axios.patch(`${api_uri}/users/${userId}`, userUpdateModel);
+
+            let stickerSet = null;
+
+            try {
+                stickerSet = await bot.getStickerSet(`${user.name}_tts_by_plshs_bot`);
+            } catch(e) {
+                console.log(`trying to create sticker set for a user: ${user.name}`);
+            }
+
+            const photo = Buffer.from(product.photo, 'base64');
+
+            if(!stickerSet) {
+                await bot.createNewStickerSet(chatId, `${user.name}_tts_by_plshs_bot`, `${user.name}_tts`, photo, '😎');
+            } else {
+                await bot.addStickerToSet(chatId, `${user.name}_tts_by_plshs_bot`, photo, '😎');
+            }
+
+            await bot.sendMessage(chatId, 'successfully bought plushie!');
 
             await bot.sendMessage(chatId, 'menu', user_keyboard);
         }
