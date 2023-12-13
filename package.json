@@ -16,7 +16,7 @@
     "http-errors": "^2.0.0",
     "mongoose": "^7.6.4",
     "morgan": "^1.10.0",
-    "node-telegram-bot-api": "^0.64.0",
+    "node-telegram-bot-api": "^0.63.0",
     "sharp": "^0.33.0"
   },
   "devDependencies": {
