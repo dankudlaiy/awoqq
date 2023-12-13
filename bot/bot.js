@@ -5,6 +5,7 @@ const port = process.env.PORT;
 
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const sharp = require('sharp')
 
 require('dotenv').config();
 
@@ -402,7 +403,9 @@ bot.on('photo', async(msg) => {
 
         const arrayBuffer = await (await fetch(fileLink)).arrayBuffer();
 
-        const buffer = Buffer.from(arrayBuffer);
+        const originalBuffer = Buffer.from(arrayBuffer);
+
+        const buffer = await resizeImage(originalBuffer);
 
         const product = {
             name: userStates[chatId].inputs[0],
@@ -420,3 +423,11 @@ bot.on('photo', async(msg) => {
         console.log(error.message);
     }
 });
+
+async function resizeImage(arrayBuffer) {
+    return  await sharp(arrayBuffer)
+        .resize(512, 512, {
+            fit: 'inside'
+        })
+        .toBuffer();
+}
