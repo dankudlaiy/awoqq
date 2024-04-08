@@ -25,6 +25,8 @@ module.exports = async function (msg){
     const buffer = states[chatId].data['buffer'];
     const stickerSet_id = states[chatId].data['stickerSet_id'];
 
+    const stickerSet = await StickerSet.findById(stickerSet_id);
+
     const sticker = {
         emoji: emoji,
         photo: buffer,
@@ -34,12 +36,12 @@ module.exports = async function (msg){
     const insertion = new Sticker(sticker);
     await insertion.save();
 
+    await bot.addStickerToSet(msg.from.id, `${stickerSet.name.replace(/ /g, '_')}_by_plshs_bot`, buffer, emoji);
+
     states[chatId] = {
         state: UserStates.DEFAULT,
         data: {}
     };
-
-    const stickerSet = await StickerSet.findById(stickerSet_id);
 
     const stickers = await Sticker.find({ stickerSet_id: stickerSet_id },{__v: 0}, undefined)
 

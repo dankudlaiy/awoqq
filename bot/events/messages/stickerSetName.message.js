@@ -4,6 +4,7 @@ const UserStates = require("../../enums/userStates");
 
 const StickerSet = require("../../../api/models/stickerSet.model");
 const User = require("../../../api/models/user.model");
+const Sticker = require("../../../api/models/sticker.model");
 
 const ManageStickerSetCallback = require("../../callbacks/manageStickerSet.callback");
 const AddStickerSetCallback = require("../../callbacks/addStickerSet.callback");
@@ -24,6 +25,10 @@ module.exports = async function (msg){
         });
 
     await stickerSet.save();
+
+    const initSticker = await Sticker.findById('6614333d65229b16e8dd61b3');
+
+    await bot.createNewStickerSet(msg.from.id, `${name.replace(/ /g, '_')}_by_plshs_bot`, name, initSticker.photo, '🙂');
 
     const stickerSets = await StickerSet.find({ user_id: user.id }, {__v: 0},  undefined);
 
