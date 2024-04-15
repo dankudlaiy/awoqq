@@ -21,6 +21,7 @@ module.exports = async function (msg){
     const stickerSet = new StickerSet(
         {
             name: name,
+            empty: true,
             user_id: user.id
         });
 
@@ -28,7 +29,7 @@ module.exports = async function (msg){
 
     const initSticker = await Sticker.findById('6614333d65229b16e8dd61b3');
 
-    await bot.createNewStickerSet(msg.from.id, `${name.replace(/ /g, '_')}_by_plshs_bot`, name, initSticker.photo, '🙂');
+    await bot.createNewStickerSet(msg.from.id, `${name.replace(/ /g, '_')}_by_plshs_bot`, name, initSticker.photo, '🧑🏼‍🔬');
 
     const stickerSets = await StickerSet.find({ user_id: user.id }, {__v: 0},  undefined);
 

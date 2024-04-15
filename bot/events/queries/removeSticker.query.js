@@ -7,17 +7,15 @@ module.exports = async function (callbackQuery){
     const messageId = callbackQuery.message.message_id;
 
     const id = callbackQuery.data.split('.')[1];
-    const file_id = callbackQuery.data.split('.')[2];
 
     const sticker = await Sticker.findById(id);
 
     const stickerSetId = sticker.stickerSet_id;
+    const file_id = sticker.file_id;
 
     await Sticker.findByIdAndDelete(id);
 
-    await bot.deleteStickerFromSet({
-        sticker: file_id
-    });
+    await bot.deleteStickerFromSet(file_id);
 
     const keyboard = {
         inline_keyboard: [

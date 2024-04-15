@@ -8,6 +8,11 @@ module.exports = async function (callbackQuery){
 
     const stickerSet = await StickerSet.findById(stickerSet_id);
 
+    if (stickerSet.empty) {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: "The sticker set is empty !", show_alert: true });
+        return;
+    }
+
     const tgStickerSet = await bot.getStickerSet(`${stickerSet.name.replace(/ /g, '_')}_by_plshs_bot`);
 
     const stickers = tgStickerSet.stickers;

@@ -3,15 +3,17 @@ const bot = require("../../common");
 const StickerSet = require("../../../api/models/stickerSet.model");
 const User = require("../../../api/models/user.model");
 
-const ManageStickerSetCallback = require("../../callbacks/manageStickerSet.callback");
 const AddStickerSetCallback = require("../../callbacks/addStickerSet.callback");
 
 module.exports = async function (callbackQuery){
-    //todo
     const chatId = callbackQuery.from.id;
     const messageId = callbackQuery.message.message_id;
 
     const id = callbackQuery.data.split('.')[1];
+
+    const stickerSet = await StickerSet.findById(id);
+
+    await bot.deleteStickerSet(`${stickerSet.name.replace(/ /g, '_')}_by_plshs_bot`);
 
     await StickerSet.findByIdAndDelete(id);
 

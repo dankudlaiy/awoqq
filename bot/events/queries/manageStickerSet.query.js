@@ -20,15 +20,8 @@ module.exports = async function (callbackQuery){
 
     const keyboard = [];
 
-    const tgStickerSet = await bot.getStickerSet(`${stickerSet.name.replace(/ /g, '_')}_by_plshs_bot`);
-
-    let a = 0;
-
     stickers.forEach(function (sticker) {
-        const manageStickerCallback = new ManageStickerCallback(
-            sticker.id, tgStickerSet.stickers[a].file_id);
-
-        a++;
+        const manageStickerCallback = new ManageStickerCallback(sticker.id);
 
         keyboard.push([{ text: sticker.emoji, callback_data: manageStickerCallback.pack() }]);
     });
