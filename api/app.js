@@ -2,9 +2,9 @@ const express = require('express');
 const morgan = require('morgan');
 const createError = require('http-errors');
 
-const productRoutes = require('./routes/product.route');
+const stickerRoutes = require('./routes/sticker.route');
 const userRoutes = require('./routes/user.route');
-const userProductRoutes = require('./routes/userProduct.route');
+const userStickerRoutes = require('./routes/userSticker.route');
 
 require('dotenv').config();
 
